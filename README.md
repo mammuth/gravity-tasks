@@ -5,7 +5,7 @@ Top = highest priority, lower items fade and blur toward the bottom.
 
 Disclaimer: This is 100% vibe coded, I didn't review a single line of code. :bomb:
 
-![GravityTasks screenshot](screenshot.png)
+<img src="screenshot.png" alt="GravityTasks screenshot" width="360" />
 
 ## Concept
 - Local-first PWA: tasks live in IndexedDB and sync to a Rails API.
@@ -42,6 +42,6 @@ docker compose -f docker-compose.prod.yml up --build
 
 Notes:
 - Backend runs on port 3000 (container port 80).
-- Frontend is served via `vite preview` on port 5173.
+- Frontend is served by Nginx on port 8080.
 - DB persists in the `backend_storage` volume. It survives container removal
   but is deleted by `docker compose down -v`.

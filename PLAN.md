@@ -41,67 +41,11 @@ M5: Done/Archive + Today/Weekly toggle
 
 ## Done
 - [x] Architecture + UX decisions locked
-- [x] User ID format: Crockford Base32
-- [x] Sync: REST-only
-- [x] Scaffold Rails API app
-- [x] Add base docker-compose.yml
-- [x] Task model + migrations
-- [x] Tasks REST endpoints scaffolded
-- [x] Scaffold Vue app + Tailwind + Pinia + Dexie
-- [x] Dexie database + sync service scaffold
-- [x] Pinia stores scaffolded (session/tasks/sync)
-- [x] App shell + onboarding + gravity list placeholders
-- [x] Dev CORS enabled for frontend
-- [x] Rack CORS added to backend
-- [x] Docker-compose services point to app dirs
-- [x] Vite API URL wired in docker-compose
-- [x] Outbox push/pull sync loop wired
-- [x] Done/Archive + Today/Weekly toggle
-- [x] Gravity UI + drag-and-drop
-- [x] Document REST endpoints + payloads
-- [x] Docker-compose dev workflow verified
-- [x] Fix Dexie ordering query for nextPosition
-- [x] Fix batch upsert params handling
-- [x] Improve action button hit areas
-- [x] Ensure gravity overlay doesn't block clicks
-- [x] Fix batch upsert id handling
-- [x] Update done action label to Undo
-- [x] Frontend copy moved to i18n
-- [x] Switch to vue-i18n integration
-- [x] Fix batch upsert unique id conflict handling
-- [x] Change tasks primary key to string ids
-- [x] Move frontend locales to JSON
-- [x] Constrain layout to full-height with scrollable gravity well
-- [x] Style app scrollbars
-- [x] Trim header and hide sync status unless error
-- [x] Restyle scrollbar with gravity accents
-- [x] Scope gravity scrollbar styling to list
-- [x] Enhance gravity well animation and scrollbar buttons
-- [x] Add starfield sparkles animation
-- [x] Refresh done section layout and achievement copy
-- [x] Replace sparkles with gravity well drift
-- [x] Tighten done section header and remove subline
-- [x] Darken gravity well center and boost sparkle visibility
-- [x] Intensify gravity well palette with purple glow
-- [x] Move sparkles above content and enlarge
-- [x] Speed up sparkle drift and remove pop-in
-- [x] Subdue sparkles and stagger visibility
-- [x] Add well shell container for outer sparkles
-- [x] Move sparkles to full-screen starfield
-- [x] Boost bottom-center sparkle visibility and speed
-- [x] Retarget starfield drift to bottom-center
-- [x] Increase starfield density and visibility
-- [x] Reduce black hole pulse and densify task rows
-- [x] Add done strike-through animation and hover-only undo
-- [x] Fill .gitignore for Rails + Vue outputs
-- [x] Add favicon + meta title
-- [x] Densify done item row height
-- [x] Add blur toggle button in gravity header
-- [x] Fix blur toggle logic to re-enable blur
-- [x] Swap blur icon to eye and archive button to trash icon
-- [x] Add PWA manifest + service worker registration
-- [x] Generate 192/512 favicon variants and wire to manifest
-- [x] Add production Docker Compose + frontend Dockerfile
-- [x] Add .env.example for docker compose
-- [x] Add README with concept + deployment instructions
-- [x] Add screenshot to README
+- [x] Rails API + Task endpoints with SQLite storage
+- [x] Vue app + Tailwind + Pinia + Dexie offline CRUD
+- [x] Sync loop + conflict handling
+- [x] Gravity UI + drag-and-drop ordering
+- [x] Done/Archive flow + onboarding User ID
+- [x] PWA manifest + service worker
+- [x] Docker dev + production deployment files
+- [x] Project README with concept + deployment
