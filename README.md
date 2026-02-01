@@ -26,9 +26,9 @@ docker compose up
 Frontend: http://localhost:5173
 Backend API: http://localhost:3000/api
 
-Override API URL via `.env`:
+Override Rails API URL via `.env`:
 ```
-VITE_API_URL=http://localhost:3000/api
+VITE_RAILS_API_URL=http://localhost:3000/api
 ```
 
 ## Production (Docker Compose)
@@ -36,7 +36,7 @@ Requires a Rails master key and a persistent volume for the SQLite DB.
 
 ```bash
 cp .env.example .env
-# set RAILS_MASTER_KEY and VITE_API_URL
+# set RAILS_MASTER_KEY and VITE_RAILS_API_URL
 docker compose -f docker-compose.prod.yml up --build
 ```
 
