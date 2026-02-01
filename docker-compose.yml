@@ -1,0 +1,25 @@
+services:
+  backend:
+    image: ruby:3.3
+    working_dir: /app/backend
+    volumes:
+      - .:/app
+      - bundle_cache:/usr/local/bundle
+    ports:
+      - "3000:3000"
+    environment:
+      BUNDLE_PATH: /usr/local/bundle
+    command: bash -lc "bundle exec rails s -b 0.0.0.0 -p 3000"
+  frontend:
+    image: node:20
+    working_dir: /app/frontend
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    command: bash -lc "npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  bundle_cache:

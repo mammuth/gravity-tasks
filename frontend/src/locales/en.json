@@ -1,0 +1,47 @@
+{
+  "app": {
+    "name": "GravityTasks",
+    "tagline": "Local-first todo gravity"
+  },
+  "auth": {
+    "userId": "User ID",
+    "generateCopyHint": "Generate your account User ID. Copy it, then continue.",
+    "generate": "Generate User ID",
+    "yourUserId": "Your User ID",
+    "copyUserId": "Copy User ID",
+    "continue": "Continue",
+    "signInHint": "Sign in with User ID.",
+    "signIn": "Sign in",
+    "userIdPlaceholder": "Enter your User ID"
+  },
+  "sync": {
+    "syncing": "syncing...",
+    "offline": "offline",
+    "synced": "synced"
+  },
+  "done": {
+    "title": "Done 🎉",
+    "today": "Today",
+    "weekly": "Weekly",
+    "count": "{count} completed",
+    "badge": "{count}",
+    "empty": "No completions yet. Pull something into the well.",
+    "undo": "Undo"
+  },
+  "tasks": {
+    "placeholder": "Drop something at the top",
+    "add": "Add",
+    "done": "Done",
+    "archive": "Archive",
+    "empty": "Your list is weightless. Add something up top."
+  },
+  "gravity": {
+    "title": "Gravity well",
+    "hint": "Top = highest priority"
+  },
+  "archive": {
+    "title": "Archive",
+    "restore": "Restore",
+    "empty": "Nothing archived yet."
+  }
+}

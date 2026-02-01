@@ -10,7 +10,7 @@ Local-first todo app with a gravity metaphor. Top = highest priority; bottom dis
 - Dev: docker-compose
 
 ## UX Flow
-1) Onboarding: generate UID -> copy -> re-enter to confirm
+1) Onboarding: generate User ID -> copy -> re-enter to confirm
 2) Main: Done strip (Today/Weekly toggle) -> input -> gravity list -> archive
 
 ## Data Model
@@ -37,15 +37,5 @@ M4: Gravity UI + drag-and-drop
 M5: Done/Archive + Today/Weekly toggle
 
 ## Still To Do
-- [ ] Bootstrap Rails API + models
-- [ ] Define REST endpoints + payloads
-- [ ] Scaffold Vue app + Tailwind + Pinia + Dexie
-- [ ] Implement outbox sync loop
-- [ ] Build gravity UI + drag-and-drop
-- [ ] Done/Archive + Today/Weekly toggle
-- [ ] Docker-compose dev setup
+- [ ] Add /session endpoint (optional)
 
-## Done
-- [x] Architecture + UX decisions locked
-- [x] UID format: Crockford Base32
-- [x] Sync: REST-only
