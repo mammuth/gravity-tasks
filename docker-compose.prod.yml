@@ -7,7 +7,7 @@ services:
     environment:
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
     volumes:
-      - backend_storage:/rails/storage
+      - ./backend/storage:/rails/storage
   frontend:
     build:
       context: ./frontend
@@ -17,6 +17,3 @@ services:
       - "8080:80"
     depends_on:
       - backend
-
-volumes:
-  backend_storage:

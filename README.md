@@ -40,6 +40,11 @@ cp .env.example .env
 docker compose -f docker-compose.prod.yml up --build
 ```
 
+Generate a Rails master key (if you don’t already have one):
+```bash
+openssl rand -hex 16
+```
+
 Notes:
 - Backend runs on port 3000 (container port 80).
 - Frontend is served by Nginx on port 8080.
