@@ -101,3 +101,6 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Swap blur icon to eye and archive button to trash icon
 - [x] Add PWA manifest + service worker registration
 - [x] Generate 192/512 favicon variants and wire to manifest
+- [x] Add production Docker Compose + frontend Dockerfile
+- [x] Add .env.example for docker compose
+- [x] Add README with concept + deployment instructions
