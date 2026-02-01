@@ -17,6 +17,7 @@ const confirmUid = ref('')
 const newTask = ref('')
 const doneRange = ref('today')
 const onboardingStep = ref('generate')
+const blurEnabled = ref(true)
 
 const showOnboarding = computed(() => !session.uid)
 const canConfirm = computed(() =>
@@ -311,15 +312,15 @@ function isSameWeek(a, b) {
               </button>
             </div>
           </div>
-          <div class="mt-3 flex flex-col gap-2">
+          <div class="mt-3 flex flex-col gap-1.5">
             <div
               v-for="task in doneTasks"
               :key="task.id"
-              class="group flex items-center justify-between rounded-2xl border border-dashed border-[var(--panel-border)] px-3 py-1.5 text-sm"
+              class="group flex items-center justify-between rounded-xl border border-dashed border-[var(--panel-border)] px-3 py-1 text-xs"
             >
               <span class="done-title">{{ task.title }}</span>
               <button
-                class="min-h-8 rounded-full border border-[var(--panel-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] opacity-100 transition hover:border-white/30 hover:bg-white/10 hover:text-white md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100"
+                class="h-7 rounded-full border border-[var(--panel-border)] px-2.5 text-[11px] font-medium text-[var(--muted)] opacity-100 transition hover:border-white/30 hover:bg-white/10 hover:text-white md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100"
                 type="button"
                 @click="handleRestore(task)"
               >
@@ -358,7 +359,45 @@ function isSameWeek(a, b) {
           >
             <div class="flex items-center justify-between">
               <p class="text-sm font-semibold">{{ t('gravity.title') }}</p>
-              <p class="text-xs text-[var(--muted)]">{{ t('gravity.hint') }}</p>
+              <div class="flex items-center gap-2 text-xs text-[var(--muted)]">
+                <p>{{ t('gravity.hint') }}</p>
+                <button
+                  class="rounded-full border border-[var(--panel-border)] p-2 text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  type="button"
+                  aria-label="Toggle blur"
+                  title="Toggle blur"
+                  @click="blurEnabled = !blurEnabled"
+                >
+                  <svg
+                    v-if="blurEnabled"
+                    class="h-3.5 w-3.5"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 10s3.2-5 8-5 8 5 8 5-3.2 5-8 5-8-5-8-5z" />
+                    <circle cx="10" cy="10" r="2.5" />
+                  </svg>
+                  <svg
+                    v-else
+                    class="h-3.5 w-3.5"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 10s3.2-5 8-5 8 5 8 5-3.2 5-8 5-8-5-8-5z" />
+                    <path d="M4 4l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
             <div class="gravity-scrollbar mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
               <draggable
@@ -373,7 +412,11 @@ function isSameWeek(a, b) {
                     class="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-black/20 px-3 py-2 text-sm"
                     :style="{
                       opacity: 1 - (index / Math.max(1, activeList.length)) * 0.6,
-                      filter: index > 2 ? `blur(${index * 0.2}px)` : 'none',
+                      filter: blurEnabled
+                        ? index > 2
+                          ? `blur(${index * 0.2}px)`
+                          : 'none'
+                        : 'none',
                     }"
                   >
                     <div class="flex flex-1 items-center gap-3">
@@ -389,11 +432,28 @@ function isSameWeek(a, b) {
                         {{ t('tasks.done') }}
                       </button>
                       <button
-                        class="pointer-events-auto relative z-10 min-h-8 rounded-full border border-[var(--panel-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                        class="pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                         type="button"
+                        :aria-label="t('tasks.archive')"
+                        :title="t('tasks.archive')"
                         @click="handleArchive(element)"
                       >
-                        {{ t('tasks.archive') }}
+                        <svg
+                          class="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M4 6h12" />
+                          <path d="M7 6V4h6v2" />
+                          <path d="M6.5 6l.6 10h5.8l.6-10" />
+                          <path d="M9 9.5v4" />
+                          <path d="M11 9.5v4" />
+                        </svg>
                       </button>
                     </div>
                   </div>
