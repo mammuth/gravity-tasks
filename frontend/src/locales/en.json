@@ -5,7 +5,7 @@
   },
   "auth": {
     "userId": "User ID",
-    "generateCopyHint": "Generate your account User ID. Copy it, then continue.",
+    "generateCopyHint": "Generate your account User ID. No email or password required. Your account is just a number—store it safely.",
     "generate": "Generate User ID",
     "yourUserId": "Your User ID",
     "copyUserId": "Copy User ID",
