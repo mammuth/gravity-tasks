@@ -20,9 +20,12 @@ const onboardingStep = ref('generate')
 const blurEnabled = ref(true)
 
 const showOnboarding = computed(() => !session.uid)
-const canConfirm = computed(() =>
-  generatedUid.value && confirmUid.value.trim().toUpperCase() === generatedUid.value
-)
+const canConfirm = computed(() => {
+  if (onboardingStep.value === 'confirm') {
+    return generatedUid.value && confirmUid.value.trim().toUpperCase() === generatedUid.value
+  }
+  return confirmUid.value.trim().length > 0
+})
 
 const activeTasks = computed(() => tasksStore.activeTasks)
 const archivedTasks = computed(() => tasksStore.archivedTasks)
@@ -74,13 +77,24 @@ const handleCopy = async () => {
 }
 
 const handleConfirm = async () => {
-  if (!canConfirm.value) return
-  session.setUid(generatedUid.value)
+  if (!confirmUid.value.trim()) return
+  if (onboardingStep.value === 'confirm') {
+    if (!canConfirm.value) return
+    session.setUid(generatedUid.value)
+    return
+  }
+  session.setUid(confirmUid.value.trim().toUpperCase())
 }
 
 const handleContinue = () => {
   if (!generatedUid.value) return
   onboardingStep.value = 'confirm'
+}
+
+const handleLogin = () => {
+  generatedUid.value = ''
+  confirmUid.value = ''
+  onboardingStep.value = 'login'
 }
 
 const handleAddTask = async () => {
@@ -248,6 +262,14 @@ function isSameWeek(a, b) {
               @click="handleContinue"
             >
               {{ t('auth.continue') }}
+            </button>
+
+            <button
+              class="rounded-full border border-[var(--panel-border)] px-4 py-2 text-sm font-semibold text-[var(--muted)] transition hover:border-white/30 hover:text-white"
+              type="button"
+              @click="handleLogin"
+            >
+              {{ t('auth.signIn') }}
             </button>
           </template>
 
