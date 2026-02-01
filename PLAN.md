@@ -99,3 +99,5 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Add blur toggle button in gravity header
 - [x] Fix blur toggle logic to re-enable blur
 - [x] Swap blur icon to eye and archive button to trash icon
+- [x] Add PWA manifest + service worker registration
+- [x] Generate 192/512 favicon variants and wire to manifest
