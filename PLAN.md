@@ -104,3 +104,4 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Add production Docker Compose + frontend Dockerfile
 - [x] Add .env.example for docker compose
 - [x] Add README with concept + deployment instructions
+- [x] Add screenshot to README

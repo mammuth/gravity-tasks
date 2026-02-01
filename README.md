@@ -5,6 +5,8 @@ Top = highest priority, lower items fade and blur toward the bottom.
 
 Disclaimer: This is 100% vibe coded, I didn't review a single line of code. :bomb:
 
+![GravityTasks screenshot](screenshot.png)
+
 ## Concept
 - Local-first PWA: tasks live in IndexedDB and sync to a Rails API.
 - Gravity metaphor: reorder by drag, items dissolve toward the well.
@@ -43,4 +45,3 @@ Notes:
 - Frontend is served via `vite preview` on port 5173.
 - DB persists in the `backend_storage` volume. It survives container removal
   but is deleted by `docker compose down -v`.
-
