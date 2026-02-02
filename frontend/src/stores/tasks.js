@@ -99,17 +99,27 @@ export const useTasksStore = defineStore('tasks', {
       })
     },
     async reorderActive(ordered) {
+      if (!ordered.length) return
+      const listId = ordered[0]?.list_id
       const total = ordered.length
       const updated = ordered.map((task, index) => ({
         ...task,
         position: (total - index) * 1000,
         updated_at: nowIso(),
       }))
+      const updatedMap = new Map(updated.map((task) => [task.id, task]))
+      if (!listId) {
+        this.tasks = this.tasks.map((task) => updatedMap.get(task.id) || task)
+      } else {
+        const orderedTasks = ordered.map((task) => updatedMap.get(task.id) || task)
+        const rest = this.tasks.filter(
+          (task) => !(task.status === 'active' && task.list_id === listId)
+        )
+        this.tasks = [...orderedTasks, ...rest]
+      }
 
       await db.tasks.bulkPut(updated)
       await Promise.all(updated.map((task) => queueUpsert('task', task)))
-      const updatedMap = new Map(updated.map((task) => [task.id, task]))
-      this.tasks = this.tasks.map((task) => updatedMap.get(task.id) || task)
     },
     async deleteTasksByList(listId) {
       const session = useSessionStore()
