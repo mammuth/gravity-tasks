@@ -399,6 +399,8 @@ function isSameWeek(a, b) {
                 class="w-full rounded-2xl border border-[var(--panel-border)] bg-transparent px-4 py-3 text-sm"
                 :placeholder="t('auth.userIdPlaceholder')"
                 type="text"
+                name="password"
+                autocomplete="current-password"
               />
             </div>
             <button
