@@ -22,7 +22,7 @@
   "done": {
     "title": "Done 🎉",
     "today": "Today",
-    "weekly": "Weekly",
+    "weekly": "Week",
     "count": "{count} completed",
     "badge": "{count}",
     "empty": "No completions yet. Pull something into the well.",

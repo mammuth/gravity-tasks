@@ -527,11 +527,11 @@ function isSameWeek(a, b) {
               </button>
             </div>
           </div>
-          <div class="mt-3 flex flex-col gap-1.5">
+          <div class="mt-3 flex flex-col gap-0.5">
             <div
               v-for="task in doneTasks"
               :key="task.id"
-              class="group flex items-center justify-between rounded-xl border border-dashed border-[var(--panel-border)] px-3 py-1 text-xs"
+              class="group relative flex items-center rounded-xl border border-dashed border-[var(--panel-border)] px-2.5 py-0.5 pr-10 text-[11px]"
             >
               <input
                 v-if="editingTaskId === task.id"
@@ -553,7 +553,7 @@ function isSameWeek(a, b) {
                 {{ task.title }}
               </button>
               <button
-                class="h-7 rounded-full border border-[var(--panel-border)] px-2.5 text-[11px] font-medium text-[var(--muted)] opacity-100 transition hover:border-white/30 hover:bg-white/10 hover:text-white md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100"
+                class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] opacity-0 pointer-events-none transition hover:border-white/30 hover:bg-white/10 hover:text-white group-hover:opacity-100 group-hover:pointer-events-auto"
                 type="button"
                 @click="handleRestore(task)"
               >
@@ -566,29 +566,9 @@ function isSameWeek(a, b) {
           </div>
         </div>
 
-        <form
-          class="rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)]/80 p-4"
-          @submit.prevent="handleAddTask"
-        >
-          <div class="flex gap-2">
-            <input
-              v-model="newTask"
-              class="flex-1 rounded-2xl border border-[var(--panel-border)] bg-transparent px-4 py-3 text-sm"
-              :placeholder="t('tasks.placeholder')"
-              type="text"
-            />
-            <button
-              class="rounded-2xl bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-black"
-              type="submit"
-            >
-              {{ t('tasks.add') }}
-            </button>
-          </div>
-        </form>
-
         <div class="well-shell flex min-h-0 flex-1">
           <section
-            class="gravity-well flex min-h-0 flex-1 flex-col rounded-[2.5rem] border border-[var(--panel-border)] bg-[var(--panel)]/60 p-5"
+            class="gravity-well flex min-h-0 flex-1 flex-col rounded-[2.5rem] border border-[var(--panel-border)] bg-[var(--panel)]/60 p-4"
           >
             <div class="flex items-center justify-between">
               <p class="text-sm font-semibold">{{ t('gravity.title') }}</p>
@@ -632,17 +612,47 @@ function isSameWeek(a, b) {
                 </button>
               </div>
             </div>
-            <div class="gravity-scrollbar mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+            <form class="mt-3" @submit.prevent="handleAddTask">
+              <div class="flex items-center gap-2">
+                <input
+                  v-model="newTask"
+                  class="flex-1 rounded-2xl border border-[var(--panel-border)] bg-transparent px-4 py-2 text-sm"
+                  :placeholder="t('tasks.placeholder')"
+                  type="text"
+                />
+                <button
+                  class="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                  type="submit"
+                  :aria-label="t('tasks.add')"
+                  :title="t('tasks.add')"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M10 4.5v11" />
+                    <path d="M4.5 10h11" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+            <div class="gravity-scrollbar mt-3 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
               <draggable
                 v-model="activeListItems"
                 item-key="id"
                 handle=".drag-handle"
                 :animation="200"
-                class="flex flex-col gap-3"
+                class="flex flex-col gap-2"
               >
                 <template #item="{ element, index }">
                   <div
-                    class="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-black/20 px-3 py-2 text-sm"
+                    class="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-black/20 px-3 py-1.5 text-sm"
                     :style="{
                       opacity: 1 - (index / Math.max(1, activeListItems.length)) * 0.6,
                       filter: blurEnabled
@@ -732,14 +742,14 @@ function isSameWeek(a, b) {
         </div>
 
         <details
-          class="rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)]/40 px-5 py-4"
+          class="rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)]/40 px-4 py-3"
         >
-          <summary class="cursor-pointer text-sm font-semibold">{{ t('archive.title') }}</summary>
+          <summary class="cursor-pointer text-xs font-semibold tracking-wide">{{ t('archive.title') }}</summary>
           <div class="mt-4 flex flex-col gap-2">
             <div
               v-for="task in archivedTasks"
               :key="task.id"
-              class="flex items-center justify-between rounded-2xl border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]"
+              class="flex items-center justify-between rounded-2xl border border-[var(--panel-border)] px-3 py-1 text-xs text-[var(--muted)]"
             >
               <input
                 v-if="editingTaskId === task.id"
