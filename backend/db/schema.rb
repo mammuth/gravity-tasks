@@ -10,12 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_01_180000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_02_120000) do
+  create_table "lists", id: :string, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "deleted_at"
+    t.string "name", null: false
+    t.float "position", null: false
+    t.integer "revision", default: 0, null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.index ["uid", "deleted_at"], name: "index_lists_on_uid_and_deleted_at"
+    t.index ["uid", "updated_at"], name: "index_lists_on_uid_and_updated_at"
+  end
+
   create_table "tasks", id: :string, force: :cascade do |t|
     t.datetime "archived_at"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
     t.datetime "done_at"
+    t.string "list_id"
     t.float "position", null: false
     t.integer "revision", default: 0, null: false
     t.string "status", default: "active", null: false
@@ -23,6 +36,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_01_180000) do
     t.string "uid", null: false
     t.datetime "updated_at", null: false
     t.index ["uid", "deleted_at"], name: "index_tasks_on_uid_and_deleted_at"
+    t.index ["uid", "list_id", "status"], name: "index_tasks_on_uid_and_list_id_and_status"
     t.index ["uid", "status"], name: "index_tasks_on_uid_and_status"
     t.index ["uid", "updated_at"], name: "index_tasks_on_uid_and_updated_at"
   end

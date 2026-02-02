@@ -1,14 +1,16 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useI18n } from 'vue-i18n'
 import { useSessionStore } from './stores/session'
 import { useTasksStore } from './stores/tasks'
+import { useListsStore } from './stores/lists'
 import { useSyncStore } from './stores/sync'
 import { generateUid } from './utils/uid'
 
 const session = useSessionStore()
 const tasksStore = useTasksStore()
+const listsStore = useListsStore()
 const syncStore = useSyncStore()
 const { t } = useI18n()
 
@@ -18,6 +20,19 @@ const newTask = ref('')
 const doneRange = ref('today')
 const onboardingStep = ref('generate')
 const blurEnabled = ref(true)
+const editingTaskId = ref(null)
+const editingValue = ref('')
+const editingOriginal = ref('')
+const editInput = ref(null)
+const addingList = ref(false)
+const newListName = ref('')
+const newListInput = ref(null)
+const setEditInput = (el) => {
+  editInput.value = el
+}
+const setNewListInput = (el) => {
+  newListInput.value = el
+}
 
 const showOnboarding = computed(() => !session.uid)
 const canConfirm = computed(() => {
@@ -27,9 +42,15 @@ const canConfirm = computed(() => {
   return confirmUid.value.trim().length > 0
 })
 
-const activeTasks = computed(() => tasksStore.activeTasks)
-const archivedTasks = computed(() => tasksStore.archivedTasks)
-const activeList = computed({
+const activeListId = computed(() => listsStore.activeListId)
+const currentList = computed(() => listsStore.activeList)
+const activeTasks = computed(() =>
+  activeListId.value ? tasksStore.activeTasks(activeListId.value) : []
+)
+const archivedTasks = computed(() =>
+  activeListId.value ? tasksStore.archivedTasks(activeListId.value) : []
+)
+const activeListItems = computed({
   get: () => activeTasks.value,
   set: async (value) => {
     await tasksStore.reorderActive(value)
@@ -39,7 +60,8 @@ const activeList = computed({
 
 const doneTasks = computed(() => {
   const now = new Date()
-  return tasksStore.doneTasks.filter((task) => {
+  const items = activeListId.value ? tasksStore.doneTasks(activeListId.value) : []
+  return items.filter((task) => {
     if (!task.done_at) return false
     const doneAt = new Date(task.done_at)
     if (doneRange.value === 'today') {
@@ -49,6 +71,8 @@ const doneTasks = computed(() => {
   })
 })
 
+const canDeleteList = computed(() => listsStore.lists.length > 1)
+
 
 const syncStatus = computed(() => {
   if (syncStore.isSyncing) return t('sync.syncing')
@@ -57,12 +81,16 @@ const syncStatus = computed(() => {
 })
 
 let syncTimer
+let editTimer
 
 const initForUid = async (uid) => {
   if (!uid) return
   await tasksStore.refresh()
+  await listsStore.refresh()
+  await listsStore.ensureDefaultList()
   await syncStore.sync(uid)
   await tasksStore.refresh()
+  await listsStore.refresh()
 }
 
 const handleGenerate = () => {
@@ -98,17 +126,102 @@ const handleLogin = () => {
 }
 
 const handleAddTask = async () => {
-  await tasksStore.addTask(newTask.value)
+  if (!activeListId.value) return
+  await tasksStore.addTask(newTask.value, activeListId.value)
   newTask.value = ''
   await syncStore.sync(session.uid)
 }
 
+const startAddList = async () => {
+  addingList.value = true
+  newListName.value = ''
+  await nextTick()
+  newListInput.value?.focus()
+}
+
+const cancelAddList = () => {
+  addingList.value = false
+  newListName.value = ''
+}
+
+const commitAddList = async () => {
+  if (!addingList.value) return
+  const trimmed = newListName.value.trim()
+  if (!trimmed) {
+    cancelAddList()
+    return
+  }
+  await listsStore.addList(trimmed)
+  cancelAddList()
+  await syncStore.sync(session.uid)
+}
+
+const handleDeleteList = async () => {
+  if (!currentList.value || !canDeleteList.value) return
+  const confirmed = window.confirm(
+    t('lists.confirmDelete', {
+      name: currentList.value.name,
+    })
+  )
+  if (!confirmed) return
+  await listsStore.deleteList(currentList.value)
+  await syncStore.sync(session.uid)
+}
+
+const startEditing = async (task) => {
+  editingTaskId.value = task.id
+  editingValue.value = task.title
+  editingOriginal.value = task.title
+  await nextTick()
+  editInput.value?.focus()
+  editInput.value?.select()
+}
+
+const stopEditing = () => {
+  window.clearTimeout(editTimer)
+  editingTaskId.value = null
+  editingValue.value = ''
+  editingOriginal.value = ''
+}
+
+const saveEditing = async (task, { close = false } = {}) => {
+  if (!task) return
+  const trimmed = editingValue.value.trim()
+  if (!trimmed) {
+    editingValue.value = editingOriginal.value
+    if (close) stopEditing()
+    return
+  }
+  if (trimmed === editingOriginal.value) {
+    if (close) stopEditing()
+    return
+  }
+  await tasksStore.updateTask(task, { title: trimmed })
+  editingOriginal.value = trimmed
+  editingValue.value = trimmed
+  await syncStore.sync(session.uid)
+  if (close) stopEditing()
+}
+
+const scheduleSave = (task) => {
+  window.clearTimeout(editTimer)
+  editTimer = window.setTimeout(() => {
+    saveEditing(task)
+  }, 600)
+}
+
 const handleDone = async (task) => {
+  if (editingTaskId.value === task.id) {
+    await saveEditing(task, { close: true })
+  }
   await tasksStore.markDone(task)
   await syncStore.sync(session.uid)
 }
 
 const handleArchive = async (task) => {
+  if (editingTaskId.value === task.id) {
+    await saveEditing(task, { close: true })
+  }
   await tasksStore.archiveTask(task)
   await syncStore.sync(session.uid)
 }
@@ -205,8 +318,10 @@ function isSameWeek(a, b) {
           <p class="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">{{ t('app.name') }}</p>
         </div>
         <div class="text-right text-xs text-[var(--muted)]">
-          <p v-if="session.uid">{{ t('auth.userId') }}</p>
-          <p v-if="session.uid" class="font-medium text-[var(--text)]">{{ session.uid }}</p>
+          <p v-if="session.uid" class="flex items-center justify-end gap-2">
+            <span>{{ t('auth.userId') }}</span>
+            <span class="font-medium text-[var(--text)]">{{ session.uid }}</span>
+          </p>
           <p v-if="syncStore.lastError" class="mt-1 text-[var(--accent-warm)]">{{ t('sync.offline') }}</p>
         </div>
       </header>
@@ -303,6 +418,84 @@ function isSameWeek(a, b) {
       </section>
 
       <section v-else class="flex min-h-0 flex-1 flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <div class="list-strip flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-1">
+            <button
+              v-for="list in listsStore.lists"
+              :key="list.id"
+              class="whitespace-nowrap rounded-full border border-[var(--panel-border)] px-3 py-1 text-xs transition"
+              :class="
+                list.id === activeListId
+                  ? 'bg-white/10 text-white'
+                  : 'text-[var(--muted)] hover:border-white/30 hover:text-white'
+              "
+              type="button"
+              @click="listsStore.setActiveList(list.id)"
+            >
+              {{ list.name }}
+            </button>
+            <input
+              v-if="addingList"
+              :ref="setNewListInput"
+              v-model="newListName"
+              class="h-7 w-28 rounded-full border border-white/10 bg-black/30 px-3 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+              :placeholder="t('lists.placeholder')"
+              type="text"
+              @blur="commitAddList"
+              @keydown.enter.prevent="commitAddList"
+              @keydown.esc.prevent="cancelAddList"
+            />
+          </div>
+          <div class="flex items-center gap-1">
+            <button
+              class="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+              type="button"
+              :aria-label="t('lists.add')"
+              :title="t('lists.add')"
+              @click="startAddList"
+            >
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M10 4.5v11" />
+                <path d="M4.5 10h11" />
+              </svg>
+            </button>
+            <button
+              class="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              type="button"
+              :aria-label="t('lists.delete')"
+              :title="t('lists.delete')"
+              :disabled="!canDeleteList"
+              @click="handleDeleteList"
+            >
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h12" />
+                <path d="M7 6V4h6v2" />
+                <path d="M6.5 6l.6 10h5.8l.6-10" />
+                <path d="M9 9.5v4" />
+                <path d="M11 9.5v4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div
           class="rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)]/80 p-5"
         >
@@ -340,7 +533,25 @@ function isSameWeek(a, b) {
               :key="task.id"
               class="group flex items-center justify-between rounded-xl border border-dashed border-[var(--panel-border)] px-3 py-1 text-xs"
             >
-              <span class="done-title">{{ task.title }}</span>
+              <input
+                v-if="editingTaskId === task.id"
+                :ref="setEditInput"
+                v-model="editingValue"
+                class="w-full rounded-md border border-white/10 bg-black/40 px-2 py-0.5 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+                type="text"
+                @blur="saveEditing(task, { close: true })"
+                @input="scheduleSave(task)"
+                @keydown.enter.prevent="saveEditing(task, { close: true })"
+                @keydown.esc.prevent="stopEditing"
+              />
+              <button
+                v-else
+                class="done-title flex-1 text-left"
+                type="button"
+                @click="startEditing(task)"
+              >
+                {{ task.title }}
+              </button>
               <button
                 class="h-7 rounded-full border border-[var(--panel-border)] px-2.5 text-[11px] font-medium text-[var(--muted)] opacity-100 transition hover:border-white/30 hover:bg-white/10 hover:text-white md:pointer-events-none md:opacity-0 md:group-hover:pointer-events-auto md:group-hover:opacity-100"
                 type="button"
@@ -423,7 +634,7 @@ function isSameWeek(a, b) {
             </div>
             <div class="gravity-scrollbar mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
               <draggable
-                v-model="activeList"
+                v-model="activeListItems"
                 item-key="id"
                 handle=".drag-handle"
                 :animation="200"
@@ -433,7 +644,7 @@ function isSameWeek(a, b) {
                   <div
                     class="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border)] bg-black/20 px-3 py-2 text-sm"
                     :style="{
-                      opacity: 1 - (index / Math.max(1, activeList.length)) * 0.6,
+                      opacity: 1 - (index / Math.max(1, activeListItems.length)) * 0.6,
                       filter: blurEnabled
                         ? index > 2
                           ? `blur(${index * 0.2}px)`
@@ -443,17 +654,49 @@ function isSameWeek(a, b) {
                   >
                     <div class="flex flex-1 items-center gap-3">
                       <span class="drag-handle cursor-grab text-[var(--muted)]">⋮⋮</span>
-                      <span>{{ element.title }}</span>
+                      <input
+                        v-if="editingTaskId === element.id"
+                        :ref="setEditInput"
+                        v-model="editingValue"
+                        class="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+                        type="text"
+                        @blur="saveEditing(element, { close: true })"
+                        @input="scheduleSave(element)"
+                        @keydown.enter.prevent="saveEditing(element, { close: true })"
+                        @keydown.esc.prevent="stopEditing"
+                      />
+                      <button
+                        v-else
+                        class="flex-1 text-left"
+                        type="button"
+                        @click="startEditing(element)"
+                      >
+                        {{ element.title }}
+                      </button>
                     </div>
                     <div class="flex gap-2">
                       <button
-                        class="pointer-events-auto relative z-10 min-h-8 rounded-full border border-[var(--panel-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                        class="pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                         type="button"
+                        :aria-label="t('tasks.done')"
+                        :title="t('tasks.done')"
                         @click="handleDone(element)"
                       >
-                        {{ t('tasks.done') }}
+                        <svg
+                          class="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M4.5 10.5l3 3 8-8" />
+                        </svg>
                       </button>
                       <button
+                        v-if="editingTaskId === element.id"
                         class="pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                         type="button"
                         :aria-label="t('tasks.archive')"
@@ -498,7 +741,25 @@ function isSameWeek(a, b) {
               :key="task.id"
               class="flex items-center justify-between rounded-2xl border border-[var(--panel-border)] px-3 py-1.5 text-sm text-[var(--muted)]"
             >
-              <span>{{ task.title }}</span>
+              <input
+                v-if="editingTaskId === task.id"
+                :ref="setEditInput"
+                v-model="editingValue"
+                class="w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+                type="text"
+                @blur="saveEditing(task, { close: true })"
+                @input="scheduleSave(task)"
+                @keydown.enter.prevent="saveEditing(task, { close: true })"
+                @keydown.esc.prevent="stopEditing"
+              />
+              <button
+                v-else
+                class="flex-1 text-left"
+                type="button"
+                @click="startEditing(task)"
+              >
+                {{ task.title }}
+              </button>
               <button
                 class="min-h-8 rounded-full border border-[var(--panel-border)] px-2.5 py-1.5 text-xs font-medium transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 type="button"

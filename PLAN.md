@@ -49,3 +49,5 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] PWA manifest + service worker
 - [x] Docker dev + production deployment files
 - [x] Project README with concept + deployment
+- [x] Inline task title editing with debounced autosave
+- [x] Multi-list support with list CRUD + list-aware tasks

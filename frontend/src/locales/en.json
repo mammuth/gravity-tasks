@@ -39,6 +39,12 @@
     "title": "Gravity well",
     "hint": "Top = highest priority"
   },
+  "lists": {
+    "add": "Add list",
+    "delete": "Delete list",
+    "placeholder": "New list",
+    "confirmDelete": "Delete \"{name}\" and all its tasks?"
+  },
   "archive": {
     "title": "Archive",
     "restore": "Restore",

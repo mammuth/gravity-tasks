@@ -5,21 +5,27 @@ import { useSessionStore } from './session'
 
 const nowIso = () => new Date().toISOString()
 
-async function nextPosition(uid) {
+async function nextPosition(uid, listId) {
   const items = await db.tasks.where('uid').equals(uid).toArray()
-  if (!items.length) return 1000
-  const last = items.sort((a, b) => a.position - b.position).at(-1)
+  const listItems = items.filter((item) => item.list_id === listId)
+  if (!listItems.length) return 1000
+  const last = listItems.sort((a, b) => a.position - b.position).at(-1)
   return last?.position ? last.position + 1000 : 1000
 }
+
+const isVisible = (task) => !task.deleted_at
 
 export const useTasksStore = defineStore('tasks', {
   state: () => ({
     tasks: [],
   }),
   getters: {
-    activeTasks: (state) => state.tasks.filter((t) => t.status === 'active'),
-    doneTasks: (state) => state.tasks.filter((t) => t.status === 'done'),
-    archivedTasks: (state) => state.tasks.filter((t) => t.status === 'archived'),
+    activeTasks: (state) => (listId) =>
+      state.tasks.filter((t) => isVisible(t) && t.status === 'active' && t.list_id === listId),
+    doneTasks: (state) => (listId) =>
+      state.tasks.filter((t) => isVisible(t) && t.status === 'done' && t.list_id === listId),
+    archivedTasks: (state) => (listId) =>
+      state.tasks.filter((t) => isVisible(t) && t.status === 'archived' && t.list_id === listId),
   },
   actions: {
     async refresh() {
@@ -29,9 +35,11 @@ export const useTasksStore = defineStore('tasks', {
       const items = await db.tasks.where('uid').equals(session.uid).toArray()
       this.tasks = items.sort((a, b) => b.position - a.position)
     },
-    async addTask(title) {
+    async addTask(title, listId) {
       const session = useSessionStore()
       if (!session.uid) return
+
+      if (!listId) return
 
       const trimmed = title.trim()
       if (!trimmed) return
@@ -39,9 +47,10 @@ export const useTasksStore = defineStore('tasks', {
       const task = {
         id: crypto.randomUUID(),
         uid: session.uid,
+        list_id: listId,
         title: trimmed,
         status: 'active',
-        position: await nextPosition(session.uid),
+        position: await nextPosition(session.uid, listId),
         done_at: null,
         archived_at: null,
         deleted_at: null,
@@ -51,7 +60,7 @@ export const useTasksStore = defineStore('tasks', {
       }
 
       await db.tasks.put(task)
-      await queueUpsert(task)
+      await queueUpsert('task', task)
       this.tasks = [task, ...this.tasks]
     },
     async updateTask(task, updates) {
@@ -62,7 +71,7 @@ export const useTasksStore = defineStore('tasks', {
       }
 
       await db.tasks.put(updated)
-      await queueUpsert(updated)
+      await queueUpsert('task', updated)
       this.tasks = this.tasks.map((item) => (item.id === task.id ? updated : item))
     },
     async markDone(task) {
@@ -98,9 +107,28 @@ export const useTasksStore = defineStore('tasks', {
       }))
 
       await db.tasks.bulkPut(updated)
-      await Promise.all(updated.map((task) => queueUpsert(task)))
-      const rest = this.tasks.filter((task) => task.status !== 'active')
-      this.tasks = [...updated, ...rest]
+      await Promise.all(updated.map((task) => queueUpsert('task', task)))
+      const updatedMap = new Map(updated.map((task) => [task.id, task]))
+      this.tasks = this.tasks.map((task) => updatedMap.get(task.id) || task)
+    },
+    async deleteTasksByList(listId) {
+      const session = useSessionStore()
+      if (!session.uid) return
+
+      const now = nowIso()
+      const items = this.tasks.filter((task) => task.list_id === listId && !task.deleted_at)
+      if (!items.length) return
+
+      const updated = items.map((task) => ({
+        ...task,
+        deleted_at: now,
+        updated_at: now,
+      }))
+
+      await db.tasks.bulkPut(updated)
+      await Promise.all(updated.map((task) => queueUpsert('task', task)))
+      const updatedMap = new Map(updated.map((task) => [task.id, task]))
+      this.tasks = this.tasks.map((task) => updatedMap.get(task.id) || task)
     },
   },
 })

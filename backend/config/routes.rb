@@ -6,6 +6,8 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   scope :api do
+    resources :lists, only: [:index, :create, :update]
+    post "lists/batch", to: "lists#batch"
     resources :tasks, only: [:index, :create, :update]
     post "tasks/batch", to: "tasks#batch"
   end

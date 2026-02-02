@@ -13,7 +13,8 @@ class TasksController < ApplicationController
   end
 
   def create
-    task = Task.new(task_params.merge(uid: current_uid))
+    attrs = ensure_list_id(task_params.to_h)
+    task = Task.new(attrs.merge(uid: current_uid))
     task.save!
 
     render json: task, status: :created
@@ -30,6 +31,7 @@ class TasksController < ApplicationController
 
   def batch
     items = params.require(:tasks)
+    default_list_id = nil
 
     results = []
     items.each do |item|
@@ -40,6 +42,11 @@ class TasksController < ApplicationController
       if task && task.uid != current_uid
         render json: { error: 'task_id_conflict' }, status: :conflict
         return
+      end
+
+      if attrs['list_id'].blank?
+        default_list_id ||= ensure_default_list.id
+        attrs['list_id'] = default_list_id
       end
 
       task ||= Task.new(id: task_id, uid: current_uid)
@@ -56,7 +63,7 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:title, :status, :position, :done_at, :archived_at, :deleted_at)
+    params.require(:task).permit(:title, :status, :position, :done_at, :archived_at, :deleted_at, :list_id)
   end
 
   def batch_task_params(item)
@@ -69,7 +76,23 @@ class TasksController < ApplicationController
       :position,
       :done_at,
       :archived_at,
-      :deleted_at
+      :deleted_at,
+      :list_id
     )
+  end
+
+  def ensure_list_id(attrs)
+    return attrs if attrs['list_id'].present?
+
+    attrs.merge('list_id' => ensure_default_list.id)
+  end
+
+  def ensure_default_list
+    list_id = "inbox-#{current_uid}"
+    List.find_or_create_by!(id: list_id, uid: current_uid) do |list|
+      list.name = 'Inbox'
+      list.position = 1000
+      list.revision = 0
+    end
   end
 end
