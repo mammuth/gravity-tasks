@@ -168,6 +168,20 @@ const handleDeleteList = async () => {
   await syncStore.sync(session.uid)
 }
 
+const handleHardReload = async () => {
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations()
+    await Promise.all(registrations.map((registration) => registration.unregister()))
+  }
+
+  if ('caches' in window) {
+    const keys = await caches.keys()
+    await Promise.all(keys.map((key) => caches.delete(key)))
+  }
+
+  window.location.reload()
+}
+
 const startEditing = async (task) => {
   editingTaskId.value = task.id
   editingValue.value = task.title
@@ -745,7 +759,30 @@ function isSameWeek(a, b) {
         <details
           class="rounded-3xl border border-[var(--panel-border)] bg-[var(--panel)]/40 px-4 py-3"
         >
-          <summary class="cursor-pointer text-xs font-semibold tracking-wide">{{ t('archive.title') }}</summary>
+          <summary class="flex items-center justify-between gap-3 cursor-pointer text-xs font-semibold tracking-wide">
+            <span>{{ t('archive.title') }}</span>
+            <button
+              class="flex h-7 w-7 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+              type="button"
+              aria-label="Reload app"
+              title="Reload app"
+              @click.stop="handleHardReload"
+            >
+              <svg
+                class="h-3.5 w-3.5"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M16 10a6 6 0 1 1-1.8-4.3" />
+                <path d="M16 4v4h-4" />
+              </svg>
+            </button>
+          </summary>
           <div class="mt-4 flex flex-col gap-2">
             <div
               v-for="task in archivedTasks"
@@ -784,6 +821,7 @@ function isSameWeek(a, b) {
             </p>
           </div>
         </details>
+
       </section>
     </main>
   </div>
