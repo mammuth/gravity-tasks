@@ -30,7 +30,7 @@ export const useListsStore = defineStore('lists', {
 
       const items = await db.lists.where('uid').equals(session.uid).toArray()
       const visible = items.filter((list) => !list.deleted_at)
-      this.lists = visible.sort((a, b) => b.position - a.position)
+      this.lists = visible.sort((a, b) => a.position - b.position)
 
       const stored = await db.meta.get(activeListKey(session.uid))
       const storedId = stored?.value
@@ -96,7 +96,7 @@ export const useListsStore = defineStore('lists', {
 
       await db.lists.put(list)
       await queueUpsert('list', list)
-      this.lists = [list, ...this.lists]
+      this.lists = [...this.lists, list]
       await this.setActiveList(list.id)
     },
     async updateList(list, updates) {
