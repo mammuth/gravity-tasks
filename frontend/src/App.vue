@@ -678,7 +678,9 @@ function isSameWeek(a, b) {
                     }"
                   >
                     <div class="flex flex-1 items-center gap-3">
-                      <span class="drag-handle cursor-grab text-[var(--muted)]">⋮⋮</span>
+                      <span class="drag-handle cursor-grab select-none touch-none rounded-lg px-2 py-1 text-[var(--muted)]">
+                        ⋮⋮
+                      </span>
                       <input
                         v-if="editingTaskId === element.id"
                         :ref="setEditInput"
