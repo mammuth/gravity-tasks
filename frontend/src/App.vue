@@ -546,7 +546,7 @@ function isSameWeek(a, b) {
             <div
               v-for="task in doneTasks"
               :key="task.id"
-              class="group relative flex items-center rounded-xl border border-dashed border-[var(--panel-border)] px-2.5 py-0.5 pr-10 text-[11px]"
+              class="relative flex items-center rounded-xl px-2.5 py-0.5 pr-9 text-[11px]"
             >
               <input
                 v-if="editingTaskId === task.id"
@@ -568,11 +568,24 @@ function isSameWeek(a, b) {
                 {{ task.title }}
               </button>
               <button
-                class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full border border-[var(--panel-border)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] opacity-0 pointer-events-none transition hover:border-white/30 hover:bg-white/10 hover:text-white group-hover:opacity-100 group-hover:pointer-events-auto"
+                class="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
                 type="button"
+                :aria-label="t('done.undo')"
+                :title="t('done.undo')"
                 @click="handleRestore(task)"
               >
-                {{ t('done.undo') }}
+                <svg
+                  class="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M10 8H5V3M5.29102 16.3569C6.22284 17.7918 7.59014 18.8902 9.19218 19.4907C10.7942 20.0913 12.547 20.1624 14.1925 19.6937C15.8379 19.225 17.2893 18.2413 18.3344 16.8867C19.3795 15.5321 19.963 13.878 19.9989 12.1675C20.0347 10.4569 19.5211 8.78001 18.5337 7.38281C17.5462 5.98561 16.1366 4.942 14.5122 4.40479C12.8878 3.86757 11.1341 3.86499 9.5083 4.39795C7.88252 4.93091 6.47059 5.97095 5.47949 7.36556" />
+                </svg>
               </button>
             </div>
             <p v-if="!doneTasks.length" class="text-xs text-[var(--muted)]">
