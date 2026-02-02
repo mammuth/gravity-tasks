@@ -174,7 +174,6 @@ const startEditing = async (task) => {
   editingOriginal.value = task.title
   await nextTick()
   editInput.value?.focus()
-  editInput.value?.select()
 }
 
 const stopEditing = () => {
