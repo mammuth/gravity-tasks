@@ -1,6 +1,7 @@
 services:
   backend:
     image: ruby:3.3
+    restart: unless-stopped
     working_dir: /app/backend
     volumes:
       - .:/app
@@ -12,6 +13,7 @@ services:
     command: bash -lc "bundle exec rails s -b 0.0.0.0 -p 3000"
   frontend:
     image: node:20
+    restart: unless-stopped
     working_dir: /app/frontend
     volumes:
       - .:/app
