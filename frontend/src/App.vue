@@ -741,6 +741,7 @@ function isSameWeek(a, b) {
                         type="button"
                         :aria-label="t('tasks.archive')"
                         :title="t('tasks.archive')"
+                        @mousedown.prevent
                         @click="handleArchive(element)"
                       >
                         <svg
