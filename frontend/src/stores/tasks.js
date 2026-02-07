@@ -49,6 +49,7 @@ export const useTasksStore = defineStore('tasks', {
         uid: session.uid,
         list_id: listId,
         title: trimmed,
+        description: null,
         status: 'active',
         position: await nextPosition(session.uid, listId),
         done_at: null,

@@ -20,15 +20,15 @@ const newTask = ref('')
 const doneRange = ref('today')
 const onboardingStep = ref('generate')
 const blurEnabled = ref(true)
-const editingTaskId = ref(null)
-const editingValue = ref('')
-const editingOriginal = ref('')
-const editInput = ref(null)
+const editingTask = ref(null)
+const editTitle = ref('')
+const editDescription = ref('')
+const titleInput = ref(null)
 const addingList = ref(false)
 const newListName = ref('')
 const newListInput = ref(null)
-const setEditInput = (el) => {
-  editInput.value = el
+const setTitleInput = (el) => {
+  titleInput.value = el
 }
 const setNewListInput = (el) => {
   newListInput.value = el
@@ -81,7 +81,6 @@ const syncStatus = computed(() => {
 })
 
 let syncTimer
-let editTimer
 
 const initForUid = async (uid) => {
   if (!uid) return
@@ -182,60 +181,77 @@ const handleHardReload = async () => {
   window.location.reload()
 }
 
-const startEditing = async (task) => {
-  editingTaskId.value = task.id
-  editingValue.value = task.title
-  editingOriginal.value = task.title
+const openTaskEditor = async (task) => {
+  editingTask.value = task
+  editTitle.value = task.title
+  editDescription.value = task.description || ''
   await nextTick()
-  editInput.value?.focus()
+  titleInput.value?.focus()
 }
 
-const stopEditing = () => {
-  window.clearTimeout(editTimer)
-  editingTaskId.value = null
-  editingValue.value = ''
-  editingOriginal.value = ''
+const closeTaskEditor = () => {
+  editingTask.value = null
+  editTitle.value = ''
+  editDescription.value = ''
 }
 
-const saveEditing = async (task, { close = false } = {}) => {
+const saveTaskEditor = async () => {
+  const task = editingTask.value
   if (!task) return
-  const trimmed = editingValue.value.trim()
-  if (!trimmed) {
-    editingValue.value = editingOriginal.value
-    if (close) stopEditing()
+
+  const trimmedTitle = editTitle.value.trim()
+  if (!trimmedTitle) {
+    editTitle.value = task.title
     return
   }
-  if (trimmed === editingOriginal.value) {
-    if (close) stopEditing()
+
+  const trimmedDescription = editDescription.value.trim()
+  const nextDescription = trimmedDescription ? trimmedDescription : null
+
+  if (trimmedTitle === task.title && nextDescription === (task.description || null)) {
+    closeTaskEditor()
     return
   }
-  await tasksStore.updateTask(task, { title: trimmed })
-  editingOriginal.value = trimmed
-  editingValue.value = trimmed
+
+  await tasksStore.updateTask(task, {
+    title: trimmedTitle,
+    description: nextDescription,
+  })
   await syncStore.sync(session.uid)
-  if (close) stopEditing()
+  closeTaskEditor()
 }
 
-const scheduleSave = (task) => {
-  window.clearTimeout(editTimer)
-  editTimer = window.setTimeout(() => {
-    saveEditing(task)
-  }, 600)
+const archiveFromEditor = async () => {
+  const task = editingTask.value
+  if (!task) return
+
+  const taskId = task.id
+  await saveTaskEditor()
+
+  const latestTask = tasksStore.tasks.find((item) => item.id === taskId)
+  if (!latestTask) return
+
+  await tasksStore.archiveTask(latestTask)
+  await syncStore.sync(session.uid)
 }
 
 const handleDone = async (task) => {
-  if (editingTaskId.value === task.id) {
-    await saveEditing(task, { close: true })
+  const taskId = task.id
+  if (editingTask.value?.id === task.id) {
+    await saveTaskEditor()
   }
-  await tasksStore.markDone(task)
+  const latestTask = tasksStore.tasks.find((item) => item.id === taskId) || task
+  await tasksStore.markDone(latestTask)
   await syncStore.sync(session.uid)
 }
 
 const handleArchive = async (task) => {
-  if (editingTaskId.value === task.id) {
-    await saveEditing(task, { close: true })
+  const taskId = task.id
+  if (editingTask.value?.id === task.id) {
+    await saveTaskEditor()
   }
-  await tasksStore.archiveTask(task)
+  const latestTask = tasksStore.tasks.find((item) => item.id === taskId) || task
+  await tasksStore.archiveTask(latestTask)
   await syncStore.sync(session.uid)
 }
 
@@ -548,22 +564,10 @@ function isSameWeek(a, b) {
               :key="task.id"
               class="relative flex items-center rounded-xl px-2.5 py-0.5 pr-9 text-[11px]"
             >
-              <input
-                v-if="editingTaskId === task.id"
-                :ref="setEditInput"
-                v-model="editingValue"
-                class="w-full rounded-md border border-white/10 bg-black/40 px-2 py-0.5 text-xs text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
-                type="text"
-                @blur="saveEditing(task, { close: true })"
-                @input="scheduleSave(task)"
-                @keydown.enter.prevent="saveEditing(task, { close: true })"
-                @keydown.esc.prevent="stopEditing"
-              />
               <button
-                v-else
                 class="done-title flex-1 text-left"
                 type="button"
-                @click="startEditing(task)"
+                @click="openTaskEditor(task)"
               >
                 {{ task.title }}
               </button>
@@ -694,22 +698,10 @@ function isSameWeek(a, b) {
                       <span class="drag-handle cursor-grab select-none touch-none rounded-lg px-2 py-1 text-[var(--muted)]">
                         ⋮⋮
                       </span>
-                      <input
-                        v-if="editingTaskId === element.id"
-                        :ref="setEditInput"
-                        v-model="editingValue"
-                        class="w-full rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
-                        type="text"
-                        @blur="saveEditing(element, { close: true })"
-                        @input="scheduleSave(element)"
-                        @keydown.enter.prevent="saveEditing(element, { close: true })"
-                        @keydown.esc.prevent="stopEditing"
-                      />
                       <button
-                        v-else
                         class="flex-1 text-left"
                         type="button"
-                        @click="startEditing(element)"
+                        @click="openTaskEditor(element)"
                       >
                         {{ element.title }}
                       </button>
@@ -733,32 +725,6 @@ function isSameWeek(a, b) {
                           aria-hidden="true"
                         >
                           <path d="M4.5 10.5l3 3 8-8" />
-                        </svg>
-                      </button>
-                      <button
-                        v-if="editingTaskId === element.id"
-                        class="pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
-                        type="button"
-                        :aria-label="t('tasks.archive')"
-                        :title="t('tasks.archive')"
-                        @mousedown.prevent
-                        @click="handleArchive(element)"
-                      >
-                        <svg
-                          class="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M4 6h12" />
-                          <path d="M7 6V4h6v2" />
-                          <path d="M6.5 6l.6 10h5.8l.6-10" />
-                          <path d="M9 9.5v4" />
-                          <path d="M11 9.5v4" />
                         </svg>
                       </button>
                     </div>
@@ -805,22 +771,10 @@ function isSameWeek(a, b) {
               :key="task.id"
               class="flex items-center justify-between rounded-2xl border border-[var(--panel-border)] px-3 py-1 text-xs text-[var(--muted)]"
             >
-              <input
-                v-if="editingTaskId === task.id"
-                :ref="setEditInput"
-                v-model="editingValue"
-                class="w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
-                type="text"
-                @blur="saveEditing(task, { close: true })"
-                @input="scheduleSave(task)"
-                @keydown.enter.prevent="saveEditing(task, { close: true })"
-                @keydown.esc.prevent="stopEditing"
-              />
               <button
-                v-else
                 class="flex-1 text-left"
                 type="button"
-                @click="startEditing(task)"
+                @click="openTaskEditor(task)"
               >
                 {{ task.title }}
               </button>
@@ -837,6 +791,78 @@ function isSameWeek(a, b) {
             </p>
           </div>
         </details>
+
+        <div
+          v-if="editingTask"
+          class="fixed inset-0 z-40 flex items-center justify-center bg-black/55 px-5"
+          @click.self="closeTaskEditor"
+        >
+          <form
+            class="w-full max-w-sm rounded-2xl border border-[var(--panel-border)] bg-[var(--panel)] p-4 shadow-2xl"
+            @submit.prevent="saveTaskEditor"
+            @keydown.esc.prevent="closeTaskEditor"
+          >
+            <p class="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
+              {{ t('tasks.edit') }}
+            </p>
+            <div class="mt-3 flex flex-col gap-3">
+              <input
+                :ref="setTitleInput"
+                v-model="editTitle"
+                class="w-full rounded-xl border border-[var(--panel-border)] bg-black/20 px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+                :placeholder="t('tasks.titlePlaceholder')"
+                type="text"
+              />
+              <textarea
+                v-model="editDescription"
+                class="min-h-28 w-full resize-y rounded-xl border border-[var(--panel-border)] bg-black/20 px-3 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-white/40"
+                :placeholder="t('tasks.descriptionPlaceholder')"
+              ></textarea>
+            </div>
+            <div class="mt-4 flex items-center justify-between gap-2">
+              <button
+                v-if="editingTask?.status === 'active'"
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
+                type="button"
+                :aria-label="t('tasks.archive')"
+                :title="t('tasks.archive')"
+                @click="archiveFromEditor"
+              >
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 6h12" />
+                  <path d="M7 6V4h6v2" />
+                  <path d="M6.5 6l.6 10h5.8l.6-10" />
+                  <path d="M9 9.5v4" />
+                  <path d="M11 9.5v4" />
+                </svg>
+              </button>
+              <div class="flex justify-end gap-2">
+              <button
+                class="rounded-full border border-[var(--panel-border)] px-3 py-1.5 text-xs text-[var(--muted)] transition hover:border-white/30 hover:text-white"
+                type="button"
+                @click="closeTaskEditor"
+              >
+                {{ t('tasks.cancel') }}
+              </button>
+              <button
+                class="rounded-full bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-black"
+                type="submit"
+              >
+                {{ t('tasks.save') }}
+              </button>
+              </div>
+            </div>
+          </form>
+        </div>
 
       </section>
     </main>

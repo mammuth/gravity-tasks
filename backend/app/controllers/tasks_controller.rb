@@ -63,7 +63,7 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:title, :status, :position, :done_at, :archived_at, :deleted_at, :list_id)
+    params.require(:task).permit(:title, :description, :status, :position, :done_at, :archived_at, :deleted_at, :list_id)
   end
 
   def batch_task_params(item)
@@ -72,6 +72,7 @@ class TasksController < ApplicationController
     params.permit(
       :id,
       :title,
+      :description,
       :status,
       :position,
       :done_at,

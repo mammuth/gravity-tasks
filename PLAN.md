@@ -51,3 +51,4 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Project README with concept + deployment
 - [x] Inline task title editing with debounced autosave
 - [x] Multi-list support with list CRUD + list-aware tasks
+- [x] Optional multiline task description with modal-based task editor

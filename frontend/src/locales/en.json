@@ -30,9 +30,14 @@
   },
   "tasks": {
     "placeholder": "Drop something at the top",
+    "titlePlaceholder": "Task title",
+    "descriptionPlaceholder": "Description",
     "add": "Add",
     "done": "Done",
     "archive": "Archive",
+    "edit": "Edit task",
+    "cancel": "Cancel",
+    "save": "Save",
     "empty": "Your list is weightless. Add something up top."
   },
   "gravity": {

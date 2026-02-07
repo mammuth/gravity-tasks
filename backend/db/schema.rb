@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_02_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_07_110000) do
   create_table "lists", id: :string, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
@@ -27,6 +27,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_02_120000) do
     t.datetime "archived_at"
     t.datetime "created_at", null: false
     t.datetime "deleted_at"
+    t.text "description"
     t.datetime "done_at"
     t.string "list_id"
     t.float "position", null: false

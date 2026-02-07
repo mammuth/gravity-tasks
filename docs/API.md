@@ -14,6 +14,7 @@ Response: `200 OK`
     "id": "uuid",
     "uid": "ABCD-EFGH-IJKL",
     "title": "Task title",
+    "description": "Multiline\nnotes",
     "status": "active",
     "position": 3000,
     "done_at": null,
@@ -32,6 +33,7 @@ Body:
 {
   "task": {
     "title": "New task",
+    "description": "Optional details",
     "status": "active",
     "position": 1000
   }
@@ -46,6 +48,7 @@ Body:
 {
   "task": {
     "title": "Updated title",
+    "description": "Optional\nupdated notes",
     "status": "done",
     "done_at": "2026-02-01T16:30:00Z"
   }
@@ -62,6 +65,7 @@ Body:
     {
       "id": "uuid",
       "title": "Task title",
+      "description": "Optional details",
       "status": "active",
       "position": 2000,
       "done_at": null,
