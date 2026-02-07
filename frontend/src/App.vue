@@ -794,7 +794,7 @@ function isSameWeek(a, b) {
 
         <div
           v-if="editingTask"
-          class="fixed inset-0 z-40 flex items-start justify-center bg-black/55 px-5 pt-[12vh]"
+          class="fixed inset-0 z-40 flex items-start justify-center bg-black/55 px-5 pt-[20vh]"
           @click.self="closeTaskEditor"
         >
           <form
