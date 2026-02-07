@@ -2,6 +2,7 @@
 
 GravityTasks is a local-first todo app where priorities orbit a gravity well.
 Top = highest priority, lower items fade and blur toward the bottom. 
+
 Hence, the concept appreciates the nature of "there are always more tasks to do than one can achieve". We appreciate the finite nature of our tasks and don't let a long list stress us out - instead, we focus our effort on _relative priority_ and just do what sounds like the most important task at a given moment.
 
 Disclaimer: This is 100% vibe coded, I didn't review a single line of code. :bomb:
