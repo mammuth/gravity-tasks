@@ -52,3 +52,4 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Inline task title editing with debounced autosave
 - [x] Multi-list support with list CRUD + list-aware tasks
 - [x] Optional multiline task description with modal-based task editor
+- [x] Global keyboard shortcuts for new-task focus (N/O) and list jump (1-9)

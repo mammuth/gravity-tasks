@@ -17,6 +17,7 @@ const { t } = useI18n()
 const generatedUid = ref('')
 const confirmUid = ref('')
 const newTask = ref('')
+const newTaskInput = ref(null)
 const doneRange = ref('today')
 const onboardingStep = ref('generate')
 const blurEnabled = ref(true)
@@ -32,6 +33,9 @@ const setTitleInput = (el) => {
 }
 const setNewListInput = (el) => {
   newListInput.value = el
+}
+const setNewTaskInput = (el) => {
+  newTaskInput.value = el
 }
 
 const showOnboarding = computed(() => !session.uid)
@@ -129,6 +133,55 @@ const handleAddTask = async () => {
   await tasksStore.addTask(newTask.value, activeListId.value)
   newTask.value = ''
   await syncStore.sync(session.uid)
+}
+
+const blurEventTarget = (event) => {
+  if (event.target instanceof HTMLElement) {
+    event.target.blur()
+  }
+}
+
+const isEditableTarget = (target) => {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
+}
+
+const focusNewTaskField = async () => {
+  if (showOnboarding.value) return
+  await nextTick()
+  newTaskInput.value?.focus()
+}
+
+const jumpToListPosition = async (position) => {
+  const list = listsStore.lists[position - 1]
+  if (!list) return
+  await listsStore.setActiveList(list.id)
+}
+
+const keyboardShortcuts = [
+  {
+    matches: (key) => key === 'n' || key === 'o',
+    run: () => focusNewTaskField(),
+  },
+  {
+    matches: (key) => /^[1-9]$/.test(key),
+    run: (key) => jumpToListPosition(Number(key)),
+  },
+]
+
+const handleGlobalKeydown = (event) => {
+  if (event.defaultPrevented || event.repeat) return
+  if (event.metaKey || event.ctrlKey || event.altKey) return
+  if (isEditableTarget(event.target)) return
+  if (showOnboarding.value || editingTask.value || addingList.value) return
+
+  const key = event.key.toLowerCase()
+  const shortcut = keyboardShortcuts.find((item) => item.matches(key))
+  if (!shortcut) return
+
+  event.preventDefault()
+  void shortcut.run(key)
 }
 
 const startAddList = async () => {
@@ -269,12 +322,14 @@ onMounted(async () => {
   syncTimer = window.setInterval(handleSync, 30000)
   window.addEventListener('online', handleSync)
   window.addEventListener('focus', handleSync)
+  window.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
   window.clearInterval(syncTimer)
   window.removeEventListener('online', handleSync)
   window.removeEventListener('focus', handleSync)
+  window.removeEventListener('keydown', handleGlobalKeydown)
 })
 
 watch(
@@ -647,10 +702,12 @@ function isSameWeek(a, b) {
             <form class="mt-3" @submit.prevent="handleAddTask">
               <div class="flex items-center gap-2">
                 <input
+                  :ref="setNewTaskInput"
                   v-model="newTask"
                   class="flex-1 rounded-2xl border border-[var(--panel-border)] bg-transparent px-4 py-2 text-sm"
                   :placeholder="t('tasks.placeholder')"
                   type="text"
+                  @keydown.esc.prevent="blurEventTarget"
                 />
                 <button
                   class="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--panel-border)] text-[var(--muted)] transition hover:border-white/30 hover:bg-white/10 hover:text-white"
