@@ -53,3 +53,4 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Multi-list support with list CRUD + list-aware tasks
 - [x] Optional multiline task description with modal-based task editor
 - [x] Global keyboard shortcuts for new-task focus (N/O) and list jump (1-9)
+- [x] Sync hydration fix: refresh Pinia stores after each sync to reflect deletes/remote updates without reload

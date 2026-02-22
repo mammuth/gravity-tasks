@@ -58,7 +58,7 @@ const activeListItems = computed({
   get: () => activeTasks.value,
   set: async (value) => {
     await tasksStore.reorderActive(value)
-    await syncStore.sync(session.uid)
+    await syncAndRefresh()
   },
 })
 
@@ -86,14 +86,21 @@ const syncStatus = computed(() => {
 
 let syncTimer
 
+const refreshStores = async () => {
+  await Promise.all([tasksStore.refresh(), listsStore.refresh()])
+}
+
+const syncAndRefresh = async (uid = session.uid) => {
+  if (!uid) return
+  await syncStore.sync(uid)
+  await refreshStores()
+}
+
 const initForUid = async (uid) => {
   if (!uid) return
-  await tasksStore.refresh()
-  await listsStore.refresh()
+  await refreshStores()
   await listsStore.ensureDefaultList()
-  await syncStore.sync(uid)
-  await tasksStore.refresh()
-  await listsStore.refresh()
+  await syncAndRefresh(uid)
 }
 
 const handleGenerate = () => {
@@ -132,7 +139,7 @@ const handleAddTask = async () => {
   if (!activeListId.value) return
   await tasksStore.addTask(newTask.value, activeListId.value)
   newTask.value = ''
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const blurEventTarget = (event) => {
@@ -205,7 +212,7 @@ const commitAddList = async () => {
   }
   await listsStore.addList(trimmed)
   cancelAddList()
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const handleDeleteList = async () => {
@@ -217,7 +224,7 @@ const handleDeleteList = async () => {
   )
   if (!confirmed) return
   await listsStore.deleteList(currentList.value)
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const handleHardReload = async () => {
@@ -270,7 +277,7 @@ const saveTaskEditor = async () => {
     title: trimmedTitle,
     description: nextDescription,
   })
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
   closeTaskEditor()
 }
 
@@ -285,7 +292,7 @@ const archiveFromEditor = async () => {
   if (!latestTask) return
 
   await tasksStore.archiveTask(latestTask)
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const handleDone = async (task) => {
@@ -295,7 +302,7 @@ const handleDone = async (task) => {
   }
   const latestTask = tasksStore.tasks.find((item) => item.id === taskId) || task
   await tasksStore.markDone(latestTask)
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const handleArchive = async (task) => {
@@ -305,15 +312,17 @@ const handleArchive = async (task) => {
   }
   const latestTask = tasksStore.tasks.find((item) => item.id === taskId) || task
   await tasksStore.archiveTask(latestTask)
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
 const handleRestore = async (task) => {
   await tasksStore.markActive(task)
-  await syncStore.sync(session.uid)
+  await syncAndRefresh()
 }
 
-const handleSync = () => syncStore.sync(session.uid)
+const handleSync = async () => {
+  await syncAndRefresh()
+}
 
 onMounted(async () => {
   session.loadUid()
