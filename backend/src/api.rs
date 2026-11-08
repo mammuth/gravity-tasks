@@ -17,8 +17,8 @@ pub enum ApiError {
     BadRequest,
     UidRequired,
     NotFound,
-    Conflict(&'static str),
-    Invalid,
+    /// A record failed validation or ownership checks; batch endpoints skip such items.
+    Rejected(&'static str),
     Internal,
 }
 
@@ -26,10 +26,9 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, body) = match self {
             ApiError::UidRequired => (StatusCode::UNAUTHORIZED, json!({ "error": "uid_required" })),
-            ApiError::Conflict(error) => (StatusCode::CONFLICT, json!({ "error": error })),
             ApiError::BadRequest => status_body(StatusCode::BAD_REQUEST),
             ApiError::NotFound => status_body(StatusCode::NOT_FOUND),
-            ApiError::Invalid => status_body(StatusCode::UNPROCESSABLE_ENTITY),
+            ApiError::Rejected(_) => status_body(StatusCode::UNPROCESSABLE_ENTITY),
             ApiError::Internal => status_body(StatusCode::INTERNAL_SERVER_ERROR),
         };
 
@@ -81,27 +80,26 @@ pub fn since(query: &HashMap<String, String>) -> Option<String> {
     query.get("since").and_then(|s| db::parse_input(s)).map(|t| db::to_db(&t))
 }
 
-/// `params.require(key)` for a batch: a non-empty array of objects.
-pub fn require_items<'a>(body: Option<&'a Object>, key: &str) -> Result<Vec<&'a Object>, ApiError> {
+/// `params.require(key)` for a batch: a non-empty array.
+pub fn require_items<'a>(body: Option<&'a Object>, key: &str) -> Result<&'a [Value], ApiError> {
     match body.and_then(|b| b.get(key)) {
-        Some(Value::Array(items)) if !items.is_empty() => {
-            items.iter().map(|item| item.as_object().ok_or(ApiError::BadRequest)).collect()
-        }
+        Some(Value::Array(items)) if !items.is_empty() => Ok(items),
         _ => Err(ApiError::BadRequest),
     }
 }
 
-/// `params.require(key)` for single-record endpoints, including Rails' JSON params wrapping
-/// (top-level attributes are accepted when the `key` wrapper is missing).
-pub fn require_record<'a>(body: Option<&'a Object>, key: &str, permitted: &[&str]) -> Result<&'a Object, ApiError> {
-    let body = body.ok_or(ApiError::BadRequest)?;
+/// A batch item as an object with an `id`.
+pub fn batch_item(item: &Value) -> Result<(&Object, String), ApiError> {
+    let attrs = item.as_object().ok_or(ApiError::Rejected("item is not an object"))?;
+    let mut id = None;
+    assign_string(attrs, "id", &mut id);
 
-    match body.get(key) {
-        Some(Value::Object(record)) if !record.is_empty() => Ok(record),
-        Some(_) => Err(ApiError::BadRequest),
-        None if permitted.iter().any(|k| body.contains_key(*k)) => Ok(body),
-        None => Err(ApiError::BadRequest),
-    }
+    Ok((attrs, id.ok_or(ApiError::Rejected("missing id"))?))
+}
+
+/// Logs a skipped batch item, so one bad outbox entry never blocks a client's sync.
+pub fn log_skipped(endpoint: &str, item: &Value, reason: &str) {
+    eprintln!("{endpoint}: skipped item {}: {reason}", item.get("id").unwrap_or(&Value::Null));
 }
 
 pub fn is_blank(s: &str) -> bool {
@@ -152,9 +150,9 @@ pub fn assign_float(attrs: &Object, key: &str, field: &mut Option<f64>) -> Resul
         Some(Value::String(s)) if is_blank(s) => *field = None,
         Some(Value::String(s)) => match s.trim().parse::<f64>() {
             Ok(v) if v.is_finite() => *field = Some(v),
-            _ => return Err(ApiError::Invalid),
+            _ => return Err(ApiError::Rejected("position is not a number")),
         },
-        Some(Value::Bool(_)) => return Err(ApiError::Invalid),
+        Some(Value::Bool(_)) => return Err(ApiError::Rejected("position is not a number")),
         _ => {}
     }
 

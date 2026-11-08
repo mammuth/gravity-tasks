@@ -1,11 +1,13 @@
 # GravityTasks API (REST)
 
-Base URL: `http://localhost:3000/api`
-Header: `X-UID: <user-id>`
+Base URL: `/api` (same origin as the app; `http://localhost:3000/api` in dev)
+Header: `X-UID: <user-id>` (or a `uid` query/body param)
 
-## GET /tasks
+Sync model: the client pushes its outbox via the batch endpoints, then pulls deltas with `since`.
+
+## GET /lists, GET /tasks
 Query params:
-- `since` (optional, ISO 8601): return tasks updated or deleted after this timestamp
+- `since` (optional, ISO 8601): only records updated or deleted after this timestamp
 
 Response: `200 OK`
 ```json
@@ -14,66 +16,40 @@ Response: `200 OK`
     "id": "uuid",
     "uid": "ABCD-EFGH-IJKL",
     "title": "Task title",
-    "description": "Multiline\nnotes",
     "status": "active",
-    "position": 3000,
+    "position": 3000.0,
     "done_at": null,
     "archived_at": null,
     "deleted_at": null,
     "revision": 1,
-    "created_at": "2026-02-01T16:00:00Z",
-    "updated_at": "2026-02-01T16:10:00Z"
+    "created_at": "2026-02-01T16:00:00.000Z",
+    "updated_at": "2026-02-01T16:10:00.000Z",
+    "list_id": "inbox-ABCD-EFGH-IJKL",
+    "description": "Multiline\nnotes"
   }
 ]
 ```
+Lists have `id, uid, name, position, deleted_at, revision, created_at, updated_at`.
 
-## POST /tasks
-Body:
-```json
-{
-  "task": {
-    "title": "New task",
-    "description": "Optional details",
-    "status": "active",
-    "position": 1000
-  }
-}
-```
+## POST /lists/batch, POST /tasks/batch
+Upserts by `id`. Body: `{ "lists": [...] }` / `{ "tasks": [...] }`.
 
-Response: `201 Created`
+Writable fields:
+- lists: `name`, `position`, `deleted_at` (setting it soft-deletes the list's tasks too)
+- tasks: `title`, `description`, `status` (`active|done|archived`), `position`, `done_at`, `archived_at`,
+  `deleted_at`, `list_id` (blank or missing → the user's `inbox-<uid>` list)
 
-## PATCH /tasks/:id
-Body:
-```json
-{
-  "task": {
-    "title": "Updated title",
-    "description": "Optional\nupdated notes",
-    "status": "done",
-    "done_at": "2026-02-01T16:30:00Z"
-  }
-}
-```
+Other fields are ignored. `revision` increments on every update; timestamps are set by the server.
 
-Response: `200 OK`
-
-## POST /tasks/batch
-Body:
 ```json
 {
   "tasks": [
-    {
-      "id": "uuid",
-      "title": "Task title",
-      "description": "Optional details",
-      "status": "active",
-      "position": 2000,
-      "done_at": null,
-      "archived_at": null,
-      "deleted_at": null
-    }
+    { "id": "uuid", "title": "Task title", "status": "active", "position": 2000, "list_id": "inbox-ABCD-EFGH-IJKL" }
   ]
 }
 ```
 
-Response: `200 OK`
+Response: `200 OK` with the saved records. Items that fail validation or belong to another user are
+skipped (and logged server-side), so one bad item never blocks the rest of a sync.
+
+Errors: `401` without a uid, `400` for malformed JSON or a missing/empty array.

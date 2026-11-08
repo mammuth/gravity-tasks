@@ -2,16 +2,16 @@ use std::collections::HashMap;
 
 use axum::Json;
 use axum::body::Bytes;
-use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::extract::{Query, State};
+use axum::http::HeaderMap;
 use rusqlite::{Connection, OptionalExtension, Row, params};
 use serde::Serialize;
+use serde_json::Value;
 
 use crate::api::{self, ApiError, Db, Object};
 use crate::db::{self, Ts};
 
 const COLUMNS: &str = "id, uid, name, position, deleted_at, revision, created_at, updated_at";
-const PERMITTED: &[&str] = &["name", "position", "deleted_at"];
 
 #[derive(Serialize)]
 pub struct List {
@@ -29,7 +29,7 @@ pub struct List {
 }
 
 impl List {
-    pub fn new(id: String, uid: &str) -> Self {
+    fn new(id: String, uid: &str) -> Self {
         List {
             id: Some(id),
             uid: uid.to_owned(),
@@ -63,9 +63,9 @@ impl List {
     }
 
     /// Validates and persists, setting timestamps like ActiveRecord does on save.
-    pub fn save(&mut self, conn: &Connection, persisted: bool) -> Result<(), ApiError> {
+    fn save(&mut self, conn: &Connection, persisted: bool) -> Result<(), ApiError> {
         if api::is_blank(&self.uid) || !api::present(&self.name) || self.position.is_none() {
-            return Err(ApiError::Invalid);
+            return Err(ApiError::Rejected("validation failed"));
         }
 
         let now = db::now();
@@ -154,47 +154,8 @@ pub async fn index(
     Ok(Json(lists))
 }
 
-pub async fn create(
-    State(db): State<Db>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-    body: Bytes,
-) -> Result<(StatusCode, Json<List>), ApiError> {
-    let body = api::parse_body(&body)?;
-    let uid = api::current_uid(&headers, &query, body.as_ref())?;
-    let attrs = api::require_record(body.as_ref(), "list", PERMITTED)?;
-
-    let mut list = List::new(uuid::Uuid::new_v4().to_string(), &uid);
-    list.assign(attrs)?;
-    list.save(&api::lock(&db), false)?;
-
-    Ok((StatusCode::CREATED, Json(list)))
-}
-
-pub async fn update(
-    State(db): State<Db>,
-    Path(id): Path<String>,
-    headers: HeaderMap,
-    Query(query): Query<HashMap<String, String>>,
-    body: Bytes,
-) -> Result<Json<List>, ApiError> {
-    let body = api::parse_body(&body)?;
-    let uid = api::current_uid(&headers, &query, body.as_ref())?;
-    let attrs = api::require_record(body.as_ref(), "list", PERMITTED)?;
-
-    let mut conn = api::lock(&db);
-    let tx = conn.transaction()?;
-    let mut list = find(&tx, &id)?.filter(|l| l.uid == uid).ok_or(ApiError::NotFound)?;
-    list.assign(attrs)?;
-    list.revision += 1;
-    list.save(&tx, true)?;
-    list.cascade_delete_tasks(&tx)?;
-    tx.commit()?;
-
-    Ok(Json(list))
-}
-
-/// Upserts the client's outbox. Runs in one transaction, so a rejected item leaves nothing half-applied.
+/// Upserts the client's outbox. Each item runs in its own savepoint: valid items are saved,
+/// rejected ones are skipped and logged, so one bad item never blocks the rest of a sync.
 pub async fn batch(
     State(db): State<Db>,
     headers: HeaderMap,
@@ -206,31 +167,41 @@ pub async fn batch(
     let items = api::require_items(body.as_ref(), "lists")?;
 
     let mut conn = api::lock(&db);
-    let tx = conn.transaction()?;
+    let mut tx = conn.transaction()?;
     let mut results = Vec::with_capacity(items.len());
 
-    for attrs in items {
-        let mut id = None;
-        api::assign_string(attrs, "id", &mut id);
-        let id = id.ok_or(ApiError::Invalid)?;
-
-        let existing = find(&tx, &id)?;
-        if existing.as_ref().is_some_and(|l| l.uid != uid) {
-            return Err(ApiError::Conflict("list_id_conflict"));
+    for item in items {
+        let sp = tx.savepoint()?;
+        match upsert(&sp, &uid, item) {
+            Ok(list) => {
+                sp.commit()?;
+                results.push(list);
+            }
+            Err(ApiError::Rejected(reason)) => api::log_skipped("lists/batch", item, reason),
+            Err(error) => return Err(error),
         }
-
-        let persisted = existing.is_some();
-        let mut list = existing.unwrap_or_else(|| List::new(id, &uid));
-        list.assign(attrs)?;
-        if persisted {
-            list.revision += 1;
-        }
-        list.save(&tx, persisted)?;
-        list.cascade_delete_tasks(&tx)?;
-
-        results.push(list);
     }
 
     tx.commit()?;
     Ok(Json(results))
+}
+
+fn upsert(conn: &Connection, uid: &str, item: &Value) -> Result<List, ApiError> {
+    let (attrs, id) = api::batch_item(item)?;
+
+    let existing = find(conn, &id)?;
+    if existing.as_ref().is_some_and(|l| l.uid != uid) {
+        return Err(ApiError::Rejected("id belongs to another user"));
+    }
+
+    let persisted = existing.is_some();
+    let mut list = existing.unwrap_or_else(|| List::new(id, uid));
+    list.assign(attrs)?;
+    if persisted {
+        list.revision += 1;
+    }
+    list.save(conn, persisted)?;
+    list.cascade_delete_tasks(conn)?;
+
+    Ok(list)
 }
