@@ -11,7 +11,7 @@ use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::http::{HeaderValue, Method};
 use axum::response::Html;
-use axum::routing::{any, get, patch, post};
+use axum::routing::{any, get, post};
 use tower_http::cors::{AllowHeaders, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -35,12 +35,10 @@ async fn main() {
 
     let app = Router::new()
         .route("/up", get(|| async { Html(r#"<!DOCTYPE html><html><body style="background-color: green"></body></html>"#) }))
-        .route("/api/lists", get(lists::index).post(lists::create))
+        .route("/api/lists", get(lists::index))
         .route("/api/lists/batch", post(lists::batch))
-        .route("/api/lists/{id}", patch(lists::update).put(lists::update))
-        .route("/api/tasks", get(tasks::index).post(tasks::create))
+        .route("/api/tasks", get(tasks::index))
         .route("/api/tasks/batch", post(tasks::batch))
-        .route("/api/tasks/{id}", patch(tasks::update).put(tasks::update))
         .route("/api/{*rest}", any(|| async { ApiError::NotFound }))
         .fallback_service(frontend)
         .layer(DefaultBodyLimit::max(16 * 1024 * 1024))
