@@ -1,21 +1,14 @@
 services:
   backend:
     build:
-      context: ./backend
-    restart: unless-stopped
-    ports:
-      - "3000:80"
-    environment:
-      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
-    volumes:
-      - ./backend/storage:/rails/storage
-  frontend:
-    build:
-      context: ./frontend
+      context: .
+      dockerfile: backend/Dockerfile
       args:
-        VITE_RAILS_API_URL: ${VITE_RAILS_API_URL}
+        VITE_RAILS_API_URL: ${VITE_RAILS_API_URL:-}
     restart: unless-stopped
+    # Serves both the API and the frontend; 8080 kept so existing proxies keep working.
     ports:
-      - "8080:80"
-    depends_on:
-      - backend
+      - "3000:3000"
+      - "8080:3000"
+    volumes:
+      - ./backend/storage:/app/storage
