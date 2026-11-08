@@ -4,7 +4,7 @@
 Local-first todo app with a gravity metaphor. Top = highest priority; bottom dissolves into the well.
 
 ## Stack
-- Backend: Rails API, SQLite
+- Backend: Rust (axum + rusqlite), SQLite; serves the built frontend too
 - Frontend: Vue 3 + Vite + Tailwind CSS + Pinia + Dexie (IndexedDB)
 - Sync: REST only (push outbox + pull since last_sync_at)
 - Dev: docker-compose
@@ -30,7 +30,7 @@ Float position values; insert between neighbors. Rebalance if gaps shrink.
 Dark palette, gravity well halo, subtle motion, fade/blur near bottom.
 
 ## Milestones
-M1: Rails API + Task endpoints
+M1: API + Task endpoints
 M2: Vue app + Tailwind + Dexie schema + offline CRUD
 M3: Sync loop + conflict merge
 M4: Gravity UI + drag-and-drop
@@ -54,3 +54,4 @@ M5: Done/Archive + Today/Weekly toggle
 - [x] Optional multiline task description with modal-based task editor
 - [x] Global keyboard shortcuts for new-task focus (N/O) and list jump (1-9)
 - [x] Sync hydration fix: refresh Pinia stores after each sync to reflect deletes/remote updates without reload
+- [x] Backend rewritten in Rust (drop-in on the existing SQLite DB), single container also serves the frontend

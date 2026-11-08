@@ -10,14 +10,14 @@ Disclaimer: This is 100% vibe coded, I didn't review a single line of code. :bom
 <img src="screenshot.png" alt="GravityTasks screenshot" width="360" />
 
 ## Concept
-- Local-first PWA: tasks live in IndexedDB and sync to a Rails API.
+- Local-first PWA: tasks live in IndexedDB and sync to a small Rust API.
 - Gravity metaphor: reorder by drag, items dissolve toward the well.
 - Offline-ready: Dexie outbox + batch sync.
 - Minimal onboarding: User ID only.
 
 ## Stack
 - Frontend: Vue 3 + Vite + Tailwind + Pinia + Dexie
-- Backend: Rails API + SQLite
+- Backend: Rust (axum) + SQLite — one ~4 MB binary that also serves the frontend
 - Dev: Docker Compose
 
 ## Development (Docker)
@@ -28,27 +28,23 @@ docker compose up
 Frontend: http://localhost:5173
 Backend API: http://localhost:3000/api
 
-Override Rails API URL via `.env`:
+Override the API URL via `.env`:
 ```
 VITE_RAILS_API_URL=http://localhost:3000/api
 ```
 
 ## Production (Docker Compose)
-Requires a Rails master key and a persistent volume for the SQLite DB.
+One container serves the API and the built frontend; the SQLite DB lives in `./backend/storage`.
 
 ```bash
-cp .env.example .env
-# set RAILS_MASTER_KEY and VITE_RAILS_API_URL
-docker compose -f docker-compose.prod.yml up --build
-```
-
-Generate a Rails master key (if you don’t already have one):
-```bash
-openssl rand -hex 16
+docker compose -f docker-compose.prod.yml up -d --build
+# or: ./redeploy.sh
 ```
 
 Notes:
-- Backend runs on port 3000 (container port 80).
-- Frontend is served by Nginx on port 8080.
-- DB persists in the `backend_storage` volume. It survives container removal
-  but is deleted by `docker compose down -v`.
+- App on port 8080 (and 3000, same server): `/` is the PWA, `/api` the API, `/up` the health check.
+- The frontend calls same-origin `/api` unless `VITE_RAILS_API_URL` is set at build time.
+- DB: `./backend/storage/production.sqlite3` (bind mount). The schema is the one the former Rails
+  backend created, so existing databases are used as-is.
+- Runtime config via env: `DATABASE_PATH`, `STATIC_DIR`, `PORT`, `CORS_ORIGINS` (default `http://localhost:5173`).
+- Idle memory: a few MB.
