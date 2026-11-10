@@ -1,0 +1,25 @@
+#!/sbin/openrc-run
+# OpenRC service for the homelab CT. Install: cp deploy/gravity-tasks.initd /etc/init.d/gravity-tasks
+# Overrides (PORT, CORS_ORIGINS, ...) go in /etc/conf.d/gravity-tasks.
+
+name="gravity-tasks"
+description="GravityTasks API + frontend"
+supervisor="supervise-daemon"
+command="/opt/gravity-tasks/current/gravity-tasks"
+command_user="gravity-tasks:gravity-tasks"
+directory="/var/lib/gravity-tasks"
+output_log="/var/log/gravity-tasks.log"
+error_log="/var/log/gravity-tasks.log"
+
+export DATABASE_PATH="${DATABASE_PATH:-/var/lib/gravity-tasks/production.sqlite3}"
+export STATIC_DIR="${STATIC_DIR:-/opt/gravity-tasks/current/public}"
+export PORT="${PORT:-3000}"
+[ -n "$CORS_ORIGINS" ] && export CORS_ORIGINS
+
+depend() {
+	need net
+}
+
+start_pre() {
+	checkpath -f -o "$command_user" "$output_log"
+}

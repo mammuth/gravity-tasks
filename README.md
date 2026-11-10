@@ -33,18 +33,26 @@ Override the API URL via `.env`:
 VITE_RAILS_API_URL=http://localhost:3000/api
 ```
 
-## Production (Docker Compose)
-One container serves the API and the built frontend; the SQLite DB lives in `./backend/storage`.
+## Production
+Every push to `main` builds a static musl binary plus the frontend in CI and publishes
+`gravity-tasks-x86_64-linux-musl.tar.gz` as the latest GitHub release. The host only downloads it.
 
+One-time setup (Alpine / OpenRC):
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
-# or: ./redeploy.sh
+addgroup -S gravity-tasks
+adduser -S -D -H -h /var/lib/gravity-tasks -s /sbin/nologin -G gravity-tasks gravity-tasks
+mkdir -p /var/lib/gravity-tasks /opt/gravity-tasks/releases
+chown gravity-tasks:gravity-tasks /var/lib/gravity-tasks
+cp deploy/gravity-tasks.initd /etc/init.d/gravity-tasks && rc-update add gravity-tasks
 ```
 
+Deploy: `./redeploy.sh` (downloads the latest release, switches `/opt/gravity-tasks/current`, restarts).
+
 Notes:
-- App on port 8080 (and 3000, same server): `/` is the PWA, `/api` the API, `/up` the health check.
+- App on port 3000: `/` is the PWA, `/api` the API, `/up` the health check.
 - The frontend calls same-origin `/api` unless `VITE_RAILS_API_URL` is set at build time.
-- DB: `./backend/storage/production.sqlite3` (bind mount). The schema is the one the former Rails
+- DB: `/var/lib/gravity-tasks/production.sqlite3`. The schema is the one the former Rails
   backend created, so existing databases are used as-is.
+- Logs: `/var/log/gravity-tasks.log`.
 - Runtime config via env: `DATABASE_PATH`, `STATIC_DIR`, `PORT`, `CORS_ORIGINS` (default `http://localhost:5173`).
 - Idle memory: a few MB.

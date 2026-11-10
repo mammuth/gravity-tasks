@@ -1,0 +1,55 @@
+# Builds the static musl binary + frontend and publishes them as the latest GitHub release.
+# The homelab CT (Alpine) pulls releases/latest via redeploy.sh, so it never builds anything itself.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend
+        working-directory: frontend
+        run: npm ci && npm run build
+
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99"
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Build backend
+        working-directory: backend
+        run: cargo build --release --locked --target x86_64-unknown-linux-musl
+
+      - name: Package
+        run: |
+          mkdir -p dist/gravity-tasks
+          cp backend/target/x86_64-unknown-linux-musl/release/gravity-tasks-backend dist/gravity-tasks/gravity-tasks
+          cp -r frontend/dist dist/gravity-tasks/public
+          tar -C dist -czf gravity-tasks-x86_64-linux-musl.tar.gz gravity-tasks
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "build-${{ github.run_number }}" gravity-tasks-x86_64-linux-musl.tar.gz \
+            --target "$GITHUB_SHA" --title "build-${{ github.run_number }}" \
+            --notes "Automated build of ${GITHUB_SHA::7}" --latest
